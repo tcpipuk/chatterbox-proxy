@@ -1,0 +1,40 @@
+services:
+  chatterbox:
+    deploy:
+      resources:
+        limits:
+          cpus: 4
+          memory: 2G
+        reservations:
+          devices:
+            - capabilities:
+                - gpu
+              count: 1
+              driver: nvidia
+    environment:
+      - HF_HOME=/app/models
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    image: bhimrazy/chatterbox-tts:v0.1.0
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models
+
+  adapter:
+    depends_on:
+      - chatterbox
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: 1G
+    environment:
+      - CHATTER_HOST=chatterbox
+      - CHATTER_PORT=8000
+      - VOICES_FILE=/app/voices.yml
+    image: ghcr.io/tcpipuk/chatterbox-proxy:latest
+    ports:
+      - "8004:8004"
+    restart: unless-stopped
+    volumes:
+      - ./voices.yml:/app/voices.yml

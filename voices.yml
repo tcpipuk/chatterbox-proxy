@@ -1,0 +1,52 @@
+# Voice presets for Chatterbox TTS
+# Each preset defines a voice that can be used with the OpenAI-compatible API
+#
+# Fields:
+#   name: Display name for the voice
+#   audio_prompt: Path to the reference audio file (relative to reference/ directory)
+#   exaggeration: Emotional intensity (0.0-1.0)
+#   cfg: Voice matching quality (0.0-1.0)
+#   temperature: Optional. Only used if no audio_prompt is provided (0.0-1.0)
+#                Controls voice randomness when no reference audio is available
+
+stewie:
+  name: Stewie
+  audio_prompt: stewie.mp3
+  exaggeration: 0.8
+  cfg: 0.4
+
+shadowheart:
+  name: Shadowheart
+  audio_prompt: shadowheart.flac
+  exaggeration: 0.6
+  cfg: 0.4
+
+rick:
+  name: Rick
+  audio_prompt: rick.mp3
+  exaggeration: 0.6
+  cfg: 0.3
+
+glados:
+  name: GLaDOS
+  audio_prompt: glados.wav
+  exaggeration: 0.3
+  cfg: 0.2
+
+american-normal:
+  name: American Female
+  audio_prompt: female_american.flac
+  exaggeration: 0.6
+  cfg: 0.8
+
+american-whisper:
+  name: American Whisper
+  audio_prompt: american_whisper.wav
+  exaggeration: 0.2
+  cfg: 0.3
+
+british-whisper:
+  name: British Whisper
+  audio_prompt: british_whisper.wav
+  exaggeration: 0.3
+  cfg: 0.4

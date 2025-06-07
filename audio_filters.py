@@ -28,11 +28,11 @@ class FilterChain:
 def apply_glados_reverb(audio: AudioSegment) -> AudioSegment:
     """Apply GLaDOS-style reverb to the audio.
 
-    This implements a simplified version of the reverb settings from the guide:
-    - Very short pre-delay (10ms)
-    - Low reverberance (15%)
-    - High damping (20%)
-    - Subtle wet signal (-6dB)
+    This implements a very subtle reverb that adds just a hint of electronic presence:
+    - Minimal pre-delay (5ms)
+    - Very low reverberance (8%)
+    - High damping (30%)
+    - Very subtle wet signal (-12dB)
 
     Args:
         audio: Input audio segment
@@ -40,24 +40,25 @@ def apply_glados_reverb(audio: AudioSegment) -> AudioSegment:
     Returns:
         Audio segment with reverb applied
     """
-    # Create a very short, filtered echo for the reverb
-    # The echo is filtered to simulate damping and tone control
-    echo = audio - 6  # -6dB wet signal
-    echo = echo.low_pass_filter(2000)  # Tone High: 100%
-    echo = echo.high_pass_filter(200)  # Tone Low: 70%
+    # Create a very subtle echo
+    echo = audio - 12  # -12dB wet signal
 
-    # Apply the echo with a very short delay
-    # The short delay and low volume create the intimate room feel
-    return audio.overlay(echo, position=10, gain_during_overlay=-15)  # 15% reverberance
+    # Apply minimal filtering to the echo
+    echo = echo.low_pass_filter(4000)  # Preserve more of the original character
+    echo = echo.high_pass_filter(400)  # Just enough to reduce muddiness
+
+    # Apply the echo with minimal delay and very low volume
+    return audio.overlay(echo, position=5, gain_during_overlay=-20)  # Very subtle reverb
 
 
 def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
     """Apply GLaDOS-style processing to the audio.
 
-    This implements the processing chain from the GLaDOS voice guide:
-    1. EQ curve for radio/speaker quality
-    2. Compression for synthetic feel
-    3. Subtle reverb for electronic presence
+    This implements a very subtle processing chain that preserves the original voice
+    while adding just enough electronic character to match GLaDOS:
+    1. Very gentle EQ for slight radio quality
+    2. Light compression for controlled dynamics
+    3. Minimal reverb for electronic presence
 
     Args:
         audio: Input audio segment
@@ -69,22 +70,22 @@ def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
     if audio.channels > 1:
         audio = audio.set_channels(1)
 
-    # Apply EQ curve
-    # Note: pydub doesn't have a direct EQ filter, so we use a combination of
-    # high-pass and low-pass filters to approximate the curve
-    audio = audio.high_pass_filter(60)  # Reduce low-end rumble
-    audio = audio.low_pass_filter(2000)  # Control high frequencies
+    # Apply very gentle EQ
+    # We want to preserve most of the original voice character
+    audio = audio.high_pass_filter(100)  # Just enough to reduce rumble
+    audio = audio.low_pass_filter(8000)  # Preserve most of the high end
 
-    # Apply compression
+    # Apply very light compression
+    # Just enough to control dynamics without sounding processed
     audio = compress_dynamic_range(
         audio,
-        threshold=-20,
-        ratio=3.0,
-        attack=8,
-        release=75,
+        threshold=-24,  # Only compress the loudest parts
+        ratio=1.5,  # Very gentle ratio
+        attack=20,  # Slower attack to preserve transients
+        release=200,  # Longer release for natural decay
     )
 
-    # Apply the improved reverb
+    # Apply the subtle reverb
     audio = apply_glados_reverb(audio)
 
     # Normalize to maintain consistent volume

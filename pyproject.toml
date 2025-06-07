@@ -19,7 +19,10 @@ dependencies = [
   "audioop-lts>=0.2",
   "fastapi>=0.115",
   "httpx>=0.28",
+  "numpy>=2.2.6",
+  "pedalboard>=0.9.17",
   "pydub>=0.25",
+  "soundfile>=0.13.1",
   "uvicorn[standard]>=0.34",
 ]
 

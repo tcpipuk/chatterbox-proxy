@@ -45,6 +45,31 @@ ENV PATH="/app/.venv/bin:${PATH}" \
 # Copy the adapter application code and default voices file
 COPY adapter.py audio_filters.py voices.yml ./
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+  libsndfile1 \
+  libjack-jackd2-0 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Create plugins directory
+RUN mkdir -p /app/plugins
+
+# Download and install VST plugins
+RUN apt-get update && apt-get install -y wget unzip \
+  && wget https://tal-software.com/downloads/plugins/TAL-Vocoder-2_64_linux.zip -O /tmp/tal-vocoder.zip \
+  && unzip /tmp/tal-vocoder.zip -d /tmp/tal-vocoder \
+  && wget https://www.auburnsounds.com/downloads/Graillon-FREE-3.1.1.zip -O /tmp/graillon3.zip \
+  && unzip /tmp/graillon3.zip -d /tmp/graillon3 \
+  # Investigate plugin file structure
+  && echo "TAL-Vocoder contents:" && ls -la /tmp/tal-vocoder \
+  && echo "Graillon3 contents:" && ls -la /tmp/graillon3 \
+  # Copy VST3 files to plugins directory (adjust paths based on investigation)
+  && find /tmp/tal-vocoder -name "*.vst3" -exec cp {} /app/plugins/ \; \
+  && find /tmp/graillon3 -name "*.vst3" -exec cp {} /app/plugins/ \; \
+  && rm -rf /tmp/* \
+  && apt-get remove -y wget unzip \
+  && rm -rf /var/lib/apt/lists/*
+
 # Expose the port the app runs on
 EXPOSE 8004
 

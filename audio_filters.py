@@ -7,14 +7,15 @@ allowing real-time transformation of TTS output to match specific character voic
 from __future__ import annotations
 
 from dataclasses import dataclass
+from io import BytesIO
 from typing import TYPE_CHECKING
 
-from pydub.effects import compress_dynamic_range, normalize
+import soundfile as sf
+from pedalboard import Chorus, Gain, Pedalboard, PitchShift, Reverb, load_plugin
+from pydub import AudioSegment
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from pydub import AudioSegment
 
 
 @dataclass
@@ -25,67 +26,14 @@ class FilterChain:
     apply: Callable[[AudioSegment], AudioSegment]
 
 
-def apply_glados_reverb(audio: AudioSegment) -> AudioSegment:
-    """Apply GLaDOS-style reverb to the audio.
-
-    This implements a very subtle reverb that adds just a hint of electronic presence:
-    - Minimal pre-delay (5ms)
-    - Very low reverberance (8%)
-    - High damping (30%)
-    - Very subtle wet signal (-12dB)
-
-    Args:
-        audio: Input audio segment
-
-    Returns:
-        Audio segment with reverb applied
-    """
-    # Create a very subtle echo
-    echo = audio - 12  # -12dB wet signal
-
-    # Apply minimal filtering to the echo
-    echo = echo.low_pass_filter(4000)  # Preserve more of the original character
-    echo = echo.high_pass_filter(400)  # Just enough to reduce muddiness
-
-    # Apply the echo with minimal delay and very low volume
-    return audio.overlay(echo, position=5, gain_during_overlay=-20)  # Very subtle reverb
-
-
-def apply_pitch_correction(audio: AudioSegment) -> AudioSegment:
-    """Apply pitch correction to simulate GLaDOS's vocoder-like quality.
-
-    This uses a combination of effects to create that characteristic "locked pitch"
-    sound with very fast response and minimal variation.
-
-    Args:
-        audio: Input audio segment
-
-    Returns:
-        Audio segment with pitch correction applied
-    """
-    # First, we'll try to "lock" the pitch by using a very aggressive
-    # compression on the pitch variations
-    corrected = compress_dynamic_range(
-        audio,
-        threshold=-30,  # Very low threshold to catch all variations
-        ratio=4.0,  # Aggressive ratio to flatten variations
-        attack=1,  # Very fast attack to catch quick changes
-        release=50,  # Quick release to maintain responsiveness
-    )
-
-    # Then apply a very subtle pitch shift to add that slight robotic quality
-    # We'll use a small shift (0.98) to slightly lower the pitch
-    return corrected._spawn(corrected.raw_data, overrides={"frame_rate": int(corrected.frame_rate * 0.98)})
-
-
 def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
-    """Apply GLaDOS-style processing to the audio.
+    """Apply GLaDOS-style processing to the audio using VST plugins.
 
     This implements a processing chain that adds the characteristic GLaDOS sound:
-    1. Pitch correction for that vocoder-like quality
-    2. Very gentle EQ for slight radio quality
-    3. Light compression for controlled dynamics
-    4. Minimal reverb for electronic presence
+    1. TAL-Vocoder for the core robotic sound
+    2. Graillon3 for hard-tune and formant shifting
+    3. Subtle pitch shift to brighten
+    4. Light chorus and reverb for presence
 
     Args:
         audio: Input audio segment
@@ -97,29 +45,32 @@ def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
     if audio.channels > 1:
         audio = audio.set_channels(1)
 
-    # Apply pitch correction first
-    audio = apply_pitch_correction(audio)
+    # Export to WAV for processing
+    wav_io = BytesIO()
+    audio.export(wav_io, format="wav")
+    wav_io.seek(0)
 
-    # Apply very gentle EQ
-    # We want to preserve most of the original voice character
-    audio = audio.high_pass_filter(100)  # Just enough to reduce rumble
-    audio = audio.low_pass_filter(8000)  # Preserve most of the high end
+    # Load the audio with soundfile
+    voice, sr = sf.read(wav_io)
 
-    # Apply very light compression
-    # Just enough to control dynamics without sounding processed
-    audio = compress_dynamic_range(
-        audio,
-        threshold=-24,  # Only compress the loudest parts
-        ratio=1.5,  # Very gentle ratio
-        attack=20,  # Slower attack to preserve transients
-        release=200,  # Longer release for natural decay
-    )
+    # Create the processing chain
+    board = Pedalboard([
+        load_plugin("/app/plugins/TAL-Vocoder.vst3"),  # 11-band vocoder
+        load_plugin("/app/plugins/Graillon3.vst3"),  # hard-tune + formant shift
+        PitchShift(semitones=+3.0),  # brighten the core
+        Gain(gain_db=-9),  # keep headroom
+        Chorus(rate_hz=0.3, depth=0.05),  # subtle movement
+        Reverb(room_size=0.25),  # electronic presence
+    ])
 
-    # Apply the subtle reverb
-    audio = apply_glados_reverb(audio)
+    # Process the audio
+    processed = board(voice, sr)
 
-    # Normalize to maintain consistent volume
-    return normalize(audio)
+    # Convert back to AudioSegment
+    output_io = BytesIO()
+    sf.write(output_io, processed, sr, format="WAV")
+    output_io.seek(0)
+    return AudioSegment.from_wav(output_io)
 
 
 # Define available filter chains

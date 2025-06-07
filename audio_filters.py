@@ -51,14 +51,41 @@ def apply_glados_reverb(audio: AudioSegment) -> AudioSegment:
     return audio.overlay(echo, position=5, gain_during_overlay=-20)  # Very subtle reverb
 
 
+def apply_pitch_correction(audio: AudioSegment) -> AudioSegment:
+    """Apply pitch correction to simulate GLaDOS's vocoder-like quality.
+
+    This uses a combination of effects to create that characteristic "locked pitch"
+    sound with very fast response and minimal variation.
+
+    Args:
+        audio: Input audio segment
+
+    Returns:
+        Audio segment with pitch correction applied
+    """
+    # First, we'll try to "lock" the pitch by using a very aggressive
+    # compression on the pitch variations
+    corrected = compress_dynamic_range(
+        audio,
+        threshold=-30,  # Very low threshold to catch all variations
+        ratio=4.0,  # Aggressive ratio to flatten variations
+        attack=1,  # Very fast attack to catch quick changes
+        release=50,  # Quick release to maintain responsiveness
+    )
+
+    # Then apply a very subtle pitch shift to add that slight robotic quality
+    # We'll use a small shift (0.98) to slightly lower the pitch
+    return corrected._spawn(corrected.raw_data, overrides={"frame_rate": int(corrected.frame_rate * 0.98)})
+
+
 def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
     """Apply GLaDOS-style processing to the audio.
 
-    This implements a very subtle processing chain that preserves the original voice
-    while adding just enough electronic character to match GLaDOS:
-    1. Very gentle EQ for slight radio quality
-    2. Light compression for controlled dynamics
-    3. Minimal reverb for electronic presence
+    This implements a processing chain that adds the characteristic GLaDOS sound:
+    1. Pitch correction for that vocoder-like quality
+    2. Very gentle EQ for slight radio quality
+    3. Light compression for controlled dynamics
+    4. Minimal reverb for electronic presence
 
     Args:
         audio: Input audio segment
@@ -69,6 +96,9 @@ def apply_glados_filters(audio: AudioSegment) -> AudioSegment:
     # Convert to mono if needed
     if audio.channels > 1:
         audio = audio.set_channels(1)
+
+    # Apply pitch correction first
+    audio = apply_pitch_correction(audio)
 
     # Apply very gentle EQ
     # We want to preserve most of the original voice character

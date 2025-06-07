@@ -8,6 +8,7 @@
 #   cfg: Voice matching quality (0.0-1.0)
 #   temperature: Optional. Only used if no audio_prompt is provided (0.0-1.0)
 #                Controls voice randomness when no reference audio is available
+#   filter_chain: Optional. Name of the audio filter chain to apply
 
 stewie:
   name: Stewie
@@ -32,6 +33,7 @@ glados:
   audio_prompt: glados.wav
   exaggeration: 0.3
   cfg: 0.2
+  filter_chain: glados
 
 american-normal:
   name: American Female

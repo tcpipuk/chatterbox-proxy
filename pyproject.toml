@@ -3,20 +3,25 @@ name = "chatterbox-proxy"
 version = "0.1.0"
 description = "A proxy for the Chatterbox TTS API"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Tom Foster", email = "tom@tcpip.uk" }]
 maintainers = [{ name = "Tom Foster", email = "tom@tcpip.uk" }]
 requires-python = ">=3.13"
 classifiers = [
   "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: MIT License",
   "Topic :: Communications :: Chat",
   "Framework :: AsyncIO",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.13",
 ]
-dependencies = ["fastapi>=0.115", "httpx>=0.28", "uvicorn[standard]>=0.34"]
+dependencies = [
+  "audioop-lts>=0.2",
+  "fastapi>=0.115",
+  "httpx>=0.28",
+  "pydub>=0.25",
+  "uvicorn[standard]>=0.34",
+]
 
 [project.urls]
 Homepage = "https://github.com/tcpipuk/chatterbox-proxy"
@@ -30,6 +35,9 @@ package = true
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["adapter", "audio_filters"]
 
 [tool.ruff]
 cache-dir = "/tmp/.ruff_cache"

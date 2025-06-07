@@ -7,6 +7,15 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
   UV_LINK_MODE=copy
 
+# Install Python audio development libraries needed for pyaudioop
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  python3-dev \
+  libasound2-dev \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /var/cache/apt/*
+
 # Install dependencies into a virtual environment using uv
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -17,6 +26,14 @@ FROM python:3.13-slim-bookworm AS runtime
 
 WORKDIR /app
 
+# Install ffmpeg and clean up in a single layer to minimise image size
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  ffmpeg \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /var/cache/apt/*
+
 # Copy the virtual environment with dependencies from the builder stage
 COPY --from=builder /app/.venv ./.venv
 
@@ -26,7 +43,7 @@ ENV PATH="/app/.venv/bin:${PATH}" \
   PYTHONUNBUFFERED=1
 
 # Copy the adapter application code and default voices file
-COPY adapter.py voices.yml ./
+COPY adapter.py audio_filters.py voices.yml ./
 
 # Expose the port the app runs on
 EXPOSE 8004
